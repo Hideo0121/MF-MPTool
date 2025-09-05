@@ -1,25 +1,24 @@
-import { AppShell } from '@/components/app-shell';
-import { AppContent } from '@/components/app-content';
-import { Head, useForm } from '@inertiajs/react';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import InputError from '@/components/input-error';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import axios from 'axios';
-import { LoaderCircle } from 'lucide-react';
-
-interface NgReason {
-    id: number;
-    reason: string;
-}
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import AppLayout from '@/layouts/app-layout';
+import { Heading } from '@/components/heading';
+import InputError from '@/components/input-error';
+import { type PageProps, type NgReason } from '@/types';
 
 export default function Entry() {
+    const { props } = usePage<PageProps>();
     const [ngReasons, setNgReasons] = useState<NgReason[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
     const { data, setData, post, processing, errors, reset } = useForm({
         line_uid: '',
         month: '',
@@ -35,7 +34,7 @@ export default function Entry() {
                 const reasons: NgReason[] = response.data;
                 setNgReasons(reasons);
 
-                // Find the 'Not specified' reason and set it as default
+                // Find the '指定なし' reason and set it as default
                 const defaultReason = reasons.find(r => r.reason === '指定なし');
                 if (defaultReason) {
                     setData('ng_reason_id', String(defaultReason.id));
@@ -43,149 +42,145 @@ export default function Entry() {
             })
             .catch(err => {
                 console.error("Failed to fetch NG reasons:", err);
-                setError("Failed to load NG reasons. Please refresh the page.");
-            })
-            .finally(() => {
-                setIsLoading(false);
             });
     }, []);
 
-    const submit = (e: React.FormEvent) => {
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F12') {
+                e.preventDefault();
+                submit(e as any); // submit関数を呼び出す
+            } else if (e.key === 'F5' && document.activeElement?.id === 'line_uid') {
+                e.preventDefault();
+                navigator.clipboard.readText().then(text => {
+                    setData('line_uid', text);
+                }).catch(err => {
+                    console.error('クリップボードの読み取りに失敗しました: ', err);
+                });
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [data]);
+
+    const submit = (e: FormEvent) => {
         e.preventDefault();
-        post('/api/entries', {
-            onSuccess: () => reset(),
+        post('/entry', {
+            onSuccess: () => reset('line_uid', 'month', 'day', 'hour', 'minute'),
         });
     };
 
-    if (isLoading) {
-        return (
-            <AppShell variant="header">
-                <Head title="Loading..." />
-                <div className="flex h-full flex-1 items-center justify-center">
-                    <LoaderCircle className="h-10 w-10 animate-spin" />
-                </div>
-            </AppShell>
-        );
-    }
-
-    if (error) {
-        return (
-            <AppShell variant="header">
-                <Head title="Error" />
-                <div className="flex h-full flex-1 items-center justify-center">
-                    <p className="text-red-500">{error}</p>
-                </div>
-            </AppShell>
-        );
-    }
+    const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if (e.key === 'Enter' && (e.target as HTMLElement).tagName.toLowerCase() !== 'textarea') {
+            e.preventDefault();
+        }
+    };
 
     return (
-        <AppShell variant="header">
-            <Head title="Data Entry" />
-            <AppContent variant="header" className="py-4">
-                <div className="mx-auto w-full max-w-2xl rounded-xl border border-sidebar-border/70 p-8 dark:border-sidebar-border">
-                    <h1 className="mb-6 text-2xl font-semibold">NG Data Entry</h1>
-                    <form onSubmit={submit} className="grid grid-cols-2 gap-6">
-                        <div className="col-span-2">
-                            <Label htmlFor="line_uid">Line UID</Label>
-                            <Input
-                                id="line_uid"
-                                value={data.line_uid}
-                                onChange={e => setData('line_uid', e.target.value)}
-                                required
-                                minLength={33}
-                                maxLength={33}
-                                pattern="[a-zA-Z0-9]{33}"
-                                title="Please enter 33 alphanumeric characters."
-                            />
-                            <InputError message={errors.line_uid} className="mt-2" />
-                        </div>
+        <AppLayout>
+            <Head title="データ入力" />
+            <Heading>モンプチ レシート登録</Heading>
 
-                        <div>
-                            <Label htmlFor="month">Month</Label>
-                            <Input
-                                id="month"
-                                type="number"
-                                value={data.month}
-                                onChange={e => setData('month', e.target.value)}
-                                required
-                                min="1"
-                                max="12"
-                            />
-                            <InputError message={errors.month} className="mt-2" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="day">Day</Label>
-                            <Input
-                                id="day"
-                                type="number"
-                                value={data.day}
-                                onChange={e => setData('day', e.target.value)}
-                                required
-                                min="1"
-                                max="31"
-                            />
-                            <InputError message={errors.day} className="mt-2" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="hour">Hour</Label>
-                            <Input
-                                id="hour"
-                                type="number"
-                                value={data.hour}
-                                onChange={e => setData('hour', e.target.value)}
-                                required
-                                min="0"
-                                max="23"
-                            />
-                            <InputError message={errors.hour} className="mt-2" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="minute">Minute</Label>
-                            <Input
-                                id="minute"
-                                type="number"
-                                value={data.minute}
-                                onChange={e => setData('minute', e.target.value)}
-                                required
-                                min="0"
-                                max="59"
-                            />
-                            <InputError message={errors.minute} className="mt-2" />
-                        </div>
-
-                        <div className="col-span-2">
-                             <InputError message={errors.date} />
-                        </div>
-
-                        <div className="col-span-2">
-                            <Label htmlFor="ng_reason_id">NG Reason</Label>
-                            <Select onValueChange={value => setData('ng_reason_id', value)} value={data.ng_reason_id}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select a reason..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {ngReasons.map(reason => (
-                                        <SelectItem key={reason.id} value={String(reason.id)}>
-                                            {reason.reason}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <InputError message={errors.ng_reason_id} className="mt-2" />
-                        </div>
-
-                        <div className="col-span-2 text-right">
-                            <Button type="submit" disabled={processing}>
-                                {processing ? 'Submitting...' : 'Submit'}
-                            </Button>
-                        </div>
-                    </form>
+            {props.flash.success && (
+                <div className="mb-4 rounded-md bg-green-100 p-4 text-center text-green-700">
+                    {props.flash.success}
                 </div>
-            </AppContent>
-        </AppShell>
+            )}
+
+            <form onSubmit={submit} onKeyDown={handleFormKeyDown} className="space-y-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {/* LINE UID */}
+                    <div className="col-span-2">
+                        <Label htmlFor="line_uid">LINE UID</Label>
+                        <Input
+                            id="line_uid"
+                            value={data.line_uid}
+                            onChange={e => setData('line_uid', e.target.value)}
+                            className="mt-1"
+                        />
+                        <InputError message={errors.line_uid} className="mt-2" />
+                    </div>
+
+                    {/* Receipt Datetime */}
+                    <fieldset className="col-span-2 rounded-md border p-4">
+                        <legend className="-ml-1 px-1 text-sm font-medium">レシート日時</legend>
+                        <div className="grid grid-cols-2 gap-4 pt-2 md:grid-cols-4">
+                            <div>
+                                <Label htmlFor="month">月</Label>
+                                <Input
+                                    id="month"
+                                    type="number"
+                                    value={data.month}
+                                    onChange={e => setData('month', e.target.value)}
+                                    className="mt-1"
+                                />
+                                <InputError message={errors.month} className="mt-2" />
+                            </div>
+                            <div>
+                                <Label htmlFor="day">日</Label>
+                                <Input
+                                    id="day"
+                                    type="number"
+                                    value={data.day}
+                                    onChange={e => setData('day', e.target.value)}
+                                    className="mt-1"
+                                />
+                                <InputError message={errors.day} className="mt-2" />
+                            </div>
+                            <div>
+                                <Label htmlFor="hour">時</Label>
+                                <Input
+                                    id="hour"
+                                    type="number"
+                                    value={data.hour}
+                                    onChange={e => setData('hour', e.target.value)}
+                                    className="mt-1"
+                                />
+                                <InputError message={errors.hour} className="mt-2" />
+                            </div>
+                            <div>
+                                <Label htmlFor="minute">分</Label>
+                                <Input
+                                    id="minute"
+                                    type="number"
+                                    value={data.minute}
+                                    onChange={e => setData('minute', e.target.value)}
+                                    className="mt-1"
+                                />
+                                <InputError message={errors.minute} className="mt-2" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    {/* NG Reason */}
+                    <div className="col-span-2">
+                        <Label htmlFor="ng_reason_id">NG理由</Label>
+                        <Select onValueChange={value => setData('ng_reason_id', value)} value={data.ng_reason_id}>
+                            <SelectTrigger className="mt-1">
+                                <SelectValue placeholder="理由を選択..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {ngReasons.map(reason => (
+                                    <SelectItem key={reason.id} value={String(reason.id)}>
+                                        {reason.reason}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.ng_reason_id} className="mt-2" />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-end">
+                    <Button type="submit" disabled={processing}>
+                        登録
+                    </Button>
+                </div>
+            </form>
+        </AppLayout>
     );
 }

@@ -31,6 +31,6 @@ class LineUidEntryController extends Controller
             'is_duplicate' => $isDuplicate,
         ]);
 
-        return response()->json($entry, 201);
+        return redirect()->route('entry.create')->with('success', '登録が完了しました。');
     }
 }

@@ -1,86 +1,83 @@
 import AuthController from '@/actions/App/Http/Controllers/AuthController';
 import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AuthLayout from '@/layouts/auth-layout';
-import { register } from '@/routes';
-import { request } from '@/routes/password';
-import { Form, Head } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { Head, useForm } from '@inertiajs/react';
+import { LoaderCircle, User, Lock } from 'lucide-react';
+import { type FormEvent } from 'react';
 
-interface LoginProps {
-    status?: string;
-    canResetPassword: boolean;
-}
+export default function Login({ status }: { status?: string }) {
+    const { data, setData, post, processing, errors, reset } = useForm({
+        worker_code: '',
+        password: '',
+    });
 
-export default function Login({ status, canResetPassword }: LoginProps) {
+    const submit = (e: FormEvent) => {
+        e.preventDefault();
+        post(AuthController.login.url(), {
+            onFinish: () => reset('password'),
+        });
+    };
+
     return (
-        <AuthLayout title="Log in to your account" description="Enter your worker code and password below to log in">
-            <Head title="Log in" />
+        <AuthLayout title="ログイン" description="">
+            <Head title="ログイン" />
 
-            <Form {...AuthController.login.form()} resetOnSuccess={['password']} className="flex flex-col gap-6">
-                {({ processing, errors }) => (
-                    <>
-                        <div className="grid gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="worker_code">Worker Code</Label>
-                                <Input
-                                    id="worker_code"
-                                    type="text"
-                                    name="worker_code"
-                                    required
-                                    autoFocus
-                                    tabIndex={1}
-                                    autoComplete="username"
-                                    placeholder="X00"
-                                />
-                                <InputError message={errors.worker_code} />
-                            </div>
+            <form onSubmit={submit} className="flex flex-col gap-8 pt-2">
+                <div className="grid gap-6">
+                    <div className="relative">
+                        <Label
+                            htmlFor="worker_code"
+                            className="absolute -top-2 left-2 z-10 bg-card px-1 text-xs text-muted-foreground"
+                        >
+                            作業者コード
+                        </Label>
+                        <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            id="worker_code"
+                            type="text"
+                            name="worker_code"
+                            value={data.worker_code}
+                            onInput={e => setData('worker_code', e.currentTarget.value.toUpperCase())}
+                            required
+                            autoFocus
+                            autoComplete="username"
+                            placeholder="X00"
+                            className="pl-10"
+                        />
+                        <InputError message={errors.worker_code} className="mt-2" />
+                    </div>
 
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
-                                    {canResetPassword && (
-                                        <TextLink href={request()} className="ml-auto text-sm" tabIndex={5}>
-                                            Forgot password?
-                                        </TextLink>
-                                    )}
-                                </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Password"
-                                />
-                                <InputError message={errors.password} />
-                            </div>
+                    <div className="relative">
+                        <Label
+                            htmlFor="password"
+                            className="absolute -top-2 left-2 z-10 bg-card px-1 text-xs text-muted-foreground"
+                        >
+                            パスワード
+                        </Label>
+                        <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            id="password"
+                            type="password"
+                            name="password"
+                            value={data.password}
+                            onChange={e => setData('password', e.target.value)}
+                            required
+                            autoComplete="current-password"
+                            placeholder="Password"
+                            className="pl-10"
+                        />
+                        <InputError message={errors.password} className="mt-2" />
+                    </div>
 
-                            <div className="flex items-center space-x-3">
-                                <Checkbox id="remember" name="remember" tabIndex={3} />
-                                <Label htmlFor="remember">Remember me</Label>
-                            </div>
-
-                            <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
-                                {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                                Log in
-                            </Button>
-                        </div>
-
-                        <div className="text-center text-sm text-muted-foreground">
-                            Don't have an account?{' '}
-                            <TextLink href={register()} tabIndex={5}>
-                                Sign up
-                            </TextLink>
-                        </div>
-                    </>
-                )}
-            </Form>
+                    <Button type="submit" className="mt-4 w-full" disabled={processing}>
+                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
+                        ログイン
+                    </Button>
+                </div>
+            </form>
 
             {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
         </AuthLayout>

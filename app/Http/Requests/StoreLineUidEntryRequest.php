@@ -25,10 +25,14 @@ class StoreLineUidEntryRequest extends FormRequest
     {
         return [
             'line_uid' => 'required|string|size:33|regex:/^[a-zA-Z0-9]+$/',
-            'month' => 'required|integer|min:1|max:12',
-            'day' => 'required|integer|min:1|max:31',
-            'hour' => 'required|integer|min:0|max:23',
-            'minute' => 'required|integer|min:0|max:59',
+            'month' => 'nullable|integer|min:1|max:12',
+            'day' => 'nullable|integer|min:1|max:31',
+            'hour' => 'nullable|integer|min:0|max:23',
+            'minute' => 'nullable|integer|min:0|max:59',
+            'month' => 'nullable|integer|min:1|max:12',
+            'day' => 'nullable|integer|min:1|max:31',
+            'hour' => 'nullable|integer|min:0|max:23',
+            'minute' => 'nullable|integer|min:0|max:59',
             'ng_reason_id' => 'required|exists:ng_reasons,id',
         ];
     }
