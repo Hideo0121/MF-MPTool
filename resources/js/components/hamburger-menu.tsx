@@ -25,7 +25,7 @@ export default function HamburgerMenu() {
                     {auth.user?.worker_code === 'J04' && (
                         <>
                             <DropdownMenuItem asChild>
-                                <Link href={route('user.create')}>ユーザー追加</Link>
+                                <Link href={route('register')}>ユーザー追加</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                         </>

@@ -12,7 +12,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
-import { Heading } from '@/components/heading';
+import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { type PageProps, type NgReason } from '@/types';
 
@@ -83,9 +83,9 @@ export default function Entry() {
     return (
         <AppLayout>
             <Head title="データ入力" />
-            <Heading>モンプチ レシート登録</Heading>
+            <Heading title="モンプチ レシート登録" />
 
-            {props.flash.success && (
+            {props.flash?.success && (
                 <div className="mb-4 rounded-md bg-green-100 p-4 text-center text-green-700">
                     {props.flash.success}
                 </div>
