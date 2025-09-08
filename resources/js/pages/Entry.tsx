@@ -101,11 +101,25 @@ export default function Entry() {
         e.preventDefault();
         post('/entry', {
             onSuccess: () => {
-                reset('line_uid', 'month', 'day', 'hour', 'minute');
                 toast.success('登録が完了しました', {
                     description: 'データが正常に保存されました。',
                     duration: 3000,
                 });
+
+                // 各フィールドの値を明示的に設定して初期化する
+                setData({
+                    line_uid: '',
+                    month: '',
+                    day: '',
+                    hour: '',
+                    minute: '',
+                    ng_reason_id: '', // これでuseEffectがトリガーされる
+                });
+
+                // DOMの更新を待ってからフォーカスを当てる
+                setTimeout(() => {
+                    document.getElementById('line_uid')?.focus();
+                }, 100);
             },
             onError: () => {
                 toast.error('登録に失敗しました', {
@@ -168,7 +182,7 @@ export default function Entry() {
                     <h1 className="text-xl font-bold">モンプチ レシート登録</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    {auth.user?.worker_code === 'J04' && (
+                    {(auth.user?.worker_code === 'J04' || auth.user?.worker_code === 'J06') && (
                         <Button
                             variant="default" // ベースのvariantを指定
                             className="border border-white bg-transparent text-white hover:bg-white hover:text-blue-700"
@@ -202,6 +216,8 @@ export default function Entry() {
                             <div className="relative">
                                 <Input
                                     id="line_uid"
+                                    type="text"
+                                    autoFocus
                                     value={data.line_uid}
                                     onChange={e => setData('line_uid', e.target.value)}
                                     className="pl-12 border-2 border-gray-200 focus:border-blue-500 rounded-lg h-12"
