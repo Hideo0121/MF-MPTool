@@ -1,9 +1,10 @@
 # 画面設計指示書
 
 ## 全体
-Doc\sample\login-preview.html
-Doc\sample\staff-registration-preview.html
-を例として、デザインに変更する
+- **統一デザイン
+  -Doc\sample\login-preview.html
+  -Doc\sample\staff-registration-preview.html
+  -を例として、デザインに変更する
 
 ## login画面
 - **タイトルは「ログイン」
@@ -11,7 +12,7 @@ Doc\sample\staff-registration-preview.html
 - **「Enter your worker code and password below to log in」は不要
 - **Worker Code⇒「作業者コードに」変更
 - **Password⇒「パスワード」に変更
-- **Remember me⇒これが機能しているなら「記憶する」に変更
+- **「記憶する」は不要
 - **Login⇒「ログイン」に変更
 - **SignUpリンクは不要
 
@@ -24,6 +25,7 @@ Doc\sample\staff-registration-preview.html
 - **月、日、時、分を枠線でくくり、総称を「レシート日時」に変更
 - **タイトルを日本語化。Line UID⇒Line UID(そのまま)、Month⇒月、Day⇒日、Hour⇒時、Minute⇒分に変更
 - **EnterキーでSubmitされないようにする
+- **Enterキーでフォーカス移動すること（Line_UID→月→日→時→分→NG理由→登録ボタンの順）
 - **Submit⇒登録に変更
 - **バリデーションルールの追加
   - line_uidは必須
@@ -32,6 +34,9 @@ Doc\sample\staff-registration-preview.html
 - **ファンクションキーF12を押すと、Submitするようにする
 - **Submit後、デバッグ画面が表示されるので消す
 - **登録完了したら完了した旨お知らせする
+- **ファンクションキーF12の押下、登録ボタンにフォーカスがあるときのEnterキー押下、登録ボタンクリックのどの方法でも必ずバリデーションチェックすること
+- **登録完了をアラートではなくおしゃれに表示すること
+- **登録完了後各項目を初期化すること
 
 ## useradd画面
 entry画面で「ユーザ追加」をクリックした際にユーザを追加するフロート画面を表示する

@@ -1,8 +1,9 @@
 <?php
 
+use App\Http\Controllers\EntryController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 Route::get('/', function () {
     if (Auth::check()) {
@@ -17,9 +18,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
 
-    Route::get('entry', function () {
-        return Inertia::render('Entry');
-    })->name('entry.create');
+    Route::get('entry', [EntryController::class, 'create'])->name('entry.create');
+    Route::post('entry', [EntryController::class, 'store'])->name('entry.store');
 });
 
 require __DIR__.'/settings.php';

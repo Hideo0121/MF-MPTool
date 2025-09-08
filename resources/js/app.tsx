@@ -6,6 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { initializeTheme } from './hooks/use-appearance';
 import { Ziggy } from './ziggy.js';
 import { route as ziggyRoute } from 'ziggy-js';
+import { Toaster } from '@/components/ui/toaster';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -21,7 +22,12 @@ createInertiaApp({
     setup({ el, App, props }) {
         const root = createRoot(el);
 
-        root.render(<App {...props} />);
+        root.render(
+            <>
+                <App {...props} />
+                <Toaster />
+            </>
+        );
     },
     progress: {
         color: '#4B5563',

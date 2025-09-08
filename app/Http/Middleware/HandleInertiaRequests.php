@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             $user = [
                 'id' => $user->id,
                 'name' => $user->worker_code, // Use worker_code as the name
+                'worker_code' => $user->worker_code, // Also include original worker_code
                 'email' => '', // Frontend might expect an email
                 'avatar' => null, // Frontend might expect an avatar
                 'is_admin' => $user->is_admin,

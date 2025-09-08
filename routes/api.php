@@ -19,6 +19,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('entries', LineUidEntryController::class)->only(['store']);
     Route::get('ng-reasons', [NgReasonController::class, 'index']);
 
+    // J04 user specific routes
+    Route::middleware('j04')->group(function () {
+        Route::post('workers', [AdminWorkerController::class, 'store']);
+    });
+
     Route::middleware('admin')->prefix('admin')->group(function () {
         Route::apiResource('workers', AdminWorkerController::class);
         Route::apiResource('ng-reasons', AdminNgReasonController::class);
