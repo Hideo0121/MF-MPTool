@@ -29,27 +29,32 @@ class EntryController extends Controller
         $worker = $request->user(); // This is actually a Worker model based on auth config
         $workerCode = $worker->worker_code;
 
-        $isDuplicateValue = 0; // Default to 0 (not a duplicate)
+        // Start building the query to check for duplicates
+        $duplicateCheckQuery = LineUidEntry::where('line_uid', $validated['line_uid'])
+                                           ->where('points', $validated['points']);
 
-        // Check if all time-related fields are blank
-        $allTimeFieldsAreBlank = empty($validated['month']) &&
-                               empty($validated['day']) &&
-                               empty($validated['hour']) &&
-                               empty($validated['minute']);
+        // Check if ANY time-related field is provided
+        $anyTimeFieldIsProvided = !empty($validated['month']) ||
+                                  !empty($validated['day']) ||
+                                  !empty($validated['hour']) ||
+                                  !empty($validated['minute']);
 
-        // If not all time fields are blank, check for duplicates
-        if (!$allTimeFieldsAreBlank) {
-            $exists = LineUidEntry::where('line_uid', $validated['line_uid'])
-                ->where('month', $validated['month'])
-                ->where('day', $validated['day'])
-                ->where('hour', $validated['hour'])
-                ->where('minute', $validated['minute'])
-                ->exists();
-
-            if ($exists) {
-                $isDuplicateValue = 1;
-            }
+        // If any time field is provided, check for an exact match on all time fields.
+        if ($anyTimeFieldIsProvided) {
+            $duplicateCheckQuery->where('month', $validated['month'])
+                                ->where('day', $validated['day'])
+                                ->where('hour', $validated['hour'])
+                                ->where('minute', $validated['minute']);
+        } else {
+            // If no time fields are provided, only match records where they are all null.
+            $duplicateCheckQuery->whereNull('month')
+                                ->whereNull('day')
+                                ->whereNull('hour')
+                                ->whereNull('minute');
         }
+
+        // Execute the query and check if a duplicate exists
+        $isDuplicateValue = $duplicateCheckQuery->exists() ? 1 : 0;
 
         LineUidEntry::create([
             'line_uid' => $validated['line_uid'],
