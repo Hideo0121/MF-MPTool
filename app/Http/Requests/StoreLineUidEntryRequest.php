@@ -29,10 +29,7 @@ class StoreLineUidEntryRequest extends FormRequest
             'day' => 'nullable|integer|min:1|max:31',
             'hour' => 'nullable|integer|min:0|max:23',
             'minute' => 'nullable|integer|min:0|max:59',
-            'month' => 'nullable|integer|min:1|max:12',
-            'day' => 'nullable|integer|min:1|max:31',
-            'hour' => 'nullable|integer|min:0|max:23',
-            'minute' => 'nullable|integer|min:0|max:59',
+            'points' => 'required|integer',
             'ng_reason_id' => 'required|exists:ng_reasons,id',
         ];
     }

@@ -21,6 +21,7 @@ class LineUidEntry extends Model
         'day',
         'hour',
         'minute',
+        'points',
         'ng_reason_id',
         'worker_code',
         'is_duplicate',

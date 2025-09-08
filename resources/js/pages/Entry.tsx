@@ -27,6 +27,7 @@ export default function Entry() {
         day: '',
         hour: '',
         minute: '',
+        points: '',
         ng_reason_id: '', // Will be set to '指定なし' when available
     });
 
@@ -113,6 +114,7 @@ export default function Entry() {
                     day: '',
                     hour: '',
                     minute: '',
+                    points: '',
                     ng_reason_id: '', // これでuseEffectがトリガーされる
                 });
 
@@ -228,6 +230,26 @@ export default function Entry() {
                                 <span className="material-icons absolute left-3 top-3 text-gray-400">account_circle</span>
                             </div>
                             <InputError message={errors.line_uid} className="text-red-500 text-sm" />
+                        </div>
+
+                        {/* Points */}
+                        <div className="space-y-2">
+                            <Label htmlFor="points" className="text-blue-700 font-medium flex items-center">
+                                <span className="material-icons mr-2">star</span>
+                                ポイント
+                            </Label>
+                            <div className="relative">
+                                <Input
+                                    id="points"
+                                    type="number"
+                                    value={data.points}
+                                    onChange={e => setData('points', e.target.value)}
+                                    className="pl-12 border-2 border-gray-200 focus:border-blue-500 rounded-lg h-12"
+                                    placeholder="ポイントを入力"
+                                />
+                                <span className="material-icons absolute left-3 top-3 text-gray-400">control_point</span>
+                            </div>
+                            <InputError message={errors.points} className="text-red-500 text-sm" />
                         </div>
 
                         {/* Receipt Datetime */}

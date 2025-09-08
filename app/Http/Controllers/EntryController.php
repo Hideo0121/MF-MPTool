@@ -57,6 +57,7 @@ class EntryController extends Controller
             'day' => $validated['day'],
             'hour' => $validated['hour'],
             'minute' => $validated['minute'],
+            'points' => $validated['points'],
             'ng_reason_id' => $validated['ng_reason_id'],
             'worker_code' => $workerCode,
             'is_duplicate' => $isDuplicateValue,

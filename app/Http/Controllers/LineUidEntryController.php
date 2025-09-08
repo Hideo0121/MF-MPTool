@@ -26,6 +26,7 @@ class LineUidEntryController extends Controller
             'day' => $validated['day'],
             'hour' => $validated['hour'],
             'minute' => $validated['minute'],
+            'points' => $validated['points'],
             'ng_reason_id' => $validated['ng_reason_id'],
             'worker_code' => Auth::user()->worker_code,
             'is_duplicate' => $isDuplicate,

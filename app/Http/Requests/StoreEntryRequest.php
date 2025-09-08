@@ -27,6 +27,7 @@ class StoreEntryRequest extends FormRequest
             'day' => ['nullable', 'integer', 'between:1,31'],
             'hour' => ['nullable', 'integer', 'between:0,23'],
             'minute' => ['nullable', 'integer', 'between:0,59'],
+            'points' => ['required', 'integer'],
             'ng_reason_id' => ['required', 'exists:ng_reasons,id'],
         ];
     }
@@ -43,6 +44,7 @@ class StoreEntryRequest extends FormRequest
             'day.between' => '日は1-31の範囲で入力してください。',
             'hour.between' => '時は0-23の範囲で入力してください。',
             'minute.between' => '分は0-59の範囲で入力してください。',
+            'points.required' => 'ポイントは必須です。',
             'ng_reason_id.required' => 'NG理由を選択してください。',
             'ng_reason_id.exists' => '選択されたNG理由が無効です。',
         ];
