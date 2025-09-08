@@ -28,7 +28,7 @@ class WorkerController extends Controller
             'is_admin' => $validated['is_admin'] ?? false,
         ]);
 
-        return response()->json($worker, 201);
+        return redirect()->back();
     }
 
     public function show(Worker $worker)

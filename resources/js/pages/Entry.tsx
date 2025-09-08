@@ -176,13 +176,15 @@ export default function Entry() {
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg flex items-center justify-between">
                 <div className="flex items-center">
-                    <div className="w-8 h-8 bg-white text-blue-600 rounded-full flex items-center justify-center font-bold mr-4">
-                        M
-                    </div>
+                    <img
+                        src="/image/mpsmall.jpg"
+                        alt="ロゴ"
+                        className="w-8 h-8 rounded-full mr-4"
+                    />
                     <h1 className="text-xl font-bold">モンプチ レシート登録</h1>
                 </div>
                 <div className="flex items-center gap-2">
-                    {(auth.user?.worker_code === 'J04' || auth.user?.worker_code === 'J06') && (
+                    {['J04', 'J06'].includes(auth.user?.worker_code ?? '') && (
                         <Button
                             variant="default" // ベースのvariantを指定
                             className="border border-white bg-transparent text-white hover:bg-white hover:text-blue-700"

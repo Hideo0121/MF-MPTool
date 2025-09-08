@@ -15,9 +15,12 @@ class IsJ04User
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (! $request->user() || $request->user()->worker_code !== 'J04') {
-            return response()->json(['message' => 'Forbidden. J04 access required.'], 403);
+        $allowedWorkerCodes = ['J04', 'J06'];
+
+        if (! $request->user() || ! in_array($request->user()->worker_code, $allowedWorkerCodes)) {
+            return response()->json(['message' => 'Forbidden. Access denied.'], 403);
         }
+
         return $next($request);
     }
 }
