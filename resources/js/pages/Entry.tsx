@@ -171,7 +171,7 @@ export default function Entry() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-            <Head title="データ入力" />
+            <Head title="データ入力 - MF_MPTool" />
 
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 shadow-lg flex items-center justify-between">

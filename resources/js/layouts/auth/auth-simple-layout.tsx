@@ -1,6 +1,6 @@
 import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
-import { Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
 
 interface AuthLayoutProps {
@@ -10,11 +10,14 @@ interface AuthLayoutProps {
 }
 
 export default function AuthSimpleLayout({ children, title, description }: PropsWithChildren<AuthLayoutProps>) {
+    const { props } = usePage();
+    const appName = (props as { name: string }).name;
     return (
         <div
             className="flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10"
             style={{ background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)' }}
         >
+            <Head title={`${title} - ${appName}`} />
             <div className="w-full max-w-sm rounded-xl bg-card p-8 shadow-2xl">
                 <div className="flex flex-col gap-6">
                     <div className="flex flex-col items-center gap-4">

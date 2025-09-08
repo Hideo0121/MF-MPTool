@@ -20,7 +20,7 @@ export default function Login({ status }: { status?: string }) {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center p-4">
-            <Head title="ログイン" />
+            <Head title="ログイン - MF_MPTool" />
             <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
 
             <div className="w-full max-w-md">
