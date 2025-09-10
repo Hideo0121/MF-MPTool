@@ -104,6 +104,11 @@ export default function Entry() {
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
+            // If any modal is open, disable the main page's shortcuts
+            if (duplicateModalOpen || userAddModalOpen) {
+                return;
+            }
+
             if (e.key === 'F12') {
                 e.preventDefault();
                 submit(e as any);
@@ -120,7 +125,7 @@ export default function Entry() {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [data]);
+    }, [data, duplicateModalOpen, userAddModalOpen]);
 
     useEffect(() => {
         if (Object.keys(errors).length > 0) {
