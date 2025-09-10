@@ -16,43 +16,97 @@ import InputError from '@/components/input-error';
 import { type PageProps, type NgReason } from '@/types';
 import { toast } from 'sonner';
 import UserAddModal from '@/components/UserAddModal';
+import DuplicateConfirmationModal from '@/components/DuplicateConfirmationModal';
 
 export default function Entry() {
     const { auth } = usePage<PageProps>().props;
     const [userAddModalOpen, setUserAddModalOpen] = useState(false);
+    const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
     const [ngReasons, setNgReasons] = useState<NgReason[]>([]);
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, clearErrors, setError } = useForm({
         line_uid: '',
         month: '',
         day: '',
         hour: '',
         minute: '',
         points: '',
-        ng_reason_id: '', // Will be set to '指定なし' when available
+        ng_reason_id: '',
+        is_duplicate: 0,
     });
 
+    // State to trigger form submission after state updates
+    const [submitTrigger, setSubmitTrigger] = useState<number | null>(null);
+
+    // Fetch NG reasons on component mount
     useEffect(() => {
         axios.get('/api/ng-reasons')
             .then(response => {
-                const reasons: NgReason[] = response.data;
-                setNgReasons(reasons);
-
-                // Find the '指定なし' reason and set it as default if no value is already set
-                const defaultReason = reasons.find(r => r.reason === '指定なし');
-                if (defaultReason && !data.ng_reason_id) {
-                    setData('ng_reason_id', String(defaultReason.id));
-                }
+                setNgReasons(response.data);
             })
             .catch(err => {
                 console.error("Failed to fetch NG reasons:", err);
             });
-    }, [data.ng_reason_id]);
+    }, []);
+
+    // Set default NG reason once the reasons are loaded and if not already set
+    useEffect(() => {
+        if (ngReasons.length > 0 && !data.ng_reason_id) {
+            const defaultReason = ngReasons.find(r => r.reason === '指定なし');
+            if (defaultReason) {
+                setData('ng_reason_id', String(defaultReason.id));
+            }
+        }
+    }, [ngReasons]);
+
+    // This effect listens for the submitTrigger and executes the post request.
+    // This ensures that `setData` has completed before the form is submitted.
+    useEffect(() => {
+        if (submitTrigger !== null) {
+            console.log('Submitting data with trigger:', data);
+            post(route('entry.store'), {
+                onSuccess: () => {
+                    toast.success('登録が完了しました', {
+                        description: 'データが正常に保存されました。',
+                        duration: 3000,
+                    });
+                    const defaultReason = ngReasons.find(r => r.reason === '指定なし');
+                    // Explicitly reset all fields to their initial state.
+                    setData({
+                        line_uid: '',
+                        month: '',
+                        day: '',
+                        hour: '',
+                        minute: '',
+                        points: '',
+                        ng_reason_id: defaultReason ? String(defaultReason.id) : '',
+                        is_duplicate: 0,
+                    });
+                    clearErrors();
+                    setTimeout(() => {
+                        document.getElementById('line_uid')?.focus();
+                    }, 100);
+                },
+                onError: (error) => {
+                    console.error("Submission error:", error);
+                    toast.error('登録に失敗しました', {
+                        description: 'データの保存中にエラーが発生しました。',
+                        duration: 3000,
+                    });
+                },
+                onFinish: () => {
+                    setDuplicateModalOpen(false);
+                    setSubmitTrigger(null); // Reset the trigger
+                }
+            });
+        }
+    }, [submitTrigger]);
+
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'F12') {
                 e.preventDefault();
-                submit(e as any); // submit関数を呼び出す
+                submit(e as any);
             } else if (e.key === 'F5' && document.activeElement?.id === 'line_uid') {
                 e.preventDefault();
                 navigator.clipboard.readText().then(text => {
@@ -62,108 +116,101 @@ export default function Entry() {
                 });
             }
         };
-
         window.addEventListener('keydown', handleKeyDown);
-
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [data]);
 
-    // Focus management for validation errors
     useEffect(() => {
         if (Object.keys(errors).length > 0) {
-            const fieldOrder: (keyof typeof errors)[] = ['line_uid', 'month', 'day', 'hour', 'minute', 'ng_reason_id'];
+            const fieldOrder: (keyof typeof errors)[] = ['line_uid', 'points', 'month', 'day', 'hour', 'minute', 'ng_reason_id'];
             for (const field of fieldOrder) {
                 if (errors[field]) {
                     setTimeout(() => {
                         const element = document.getElementById(field);
                         if (element) {
-                            // Special handling for Select component
                             if (field === 'ng_reason_id') {
                                 const selectTrigger = element.querySelector('[role="combobox"]') as HTMLElement;
-                                if (selectTrigger) {
-                                    selectTrigger.focus();
-                                } else {
-                                    element.focus();
-                                }
+                                selectTrigger?.focus();
                             } else {
                                 element.focus();
                             }
                         }
-                    }, 100); // Short delay to ensure DOM is updated
+                    }, 100);
                     break;
                 }
             }
         }
     }, [errors]);
 
-    const submit = (e: FormEvent) => {
+    const submit = async (e: FormEvent) => {
         e.preventDefault();
-        post('/entry', {
-            onSuccess: () => {
-                toast.success('登録が完了しました', {
-                    description: 'データが正常に保存されました。',
+        clearErrors();
+        try {
+            const response = await axios.post(route('entries.checkDuplicate'), {
+                line_uid: data.line_uid,
+                points: data.points,
+                month: data.month || null,
+                day: data.day || null,
+                hour: data.hour || null,
+                minute: data.minute || null,
+            });
+            if (response.data.is_duplicate) {
+                setDuplicateModalOpen(true);
+            } else {
+                setData('is_duplicate', 0);
+                setSubmitTrigger(Date.now()); // Trigger submission
+            }
+        } catch (error: any) {
+            if (error.response && error.response.status === 422) {
+                const validationErrors = error.response.data.errors;
+                const newErrors: Partial<Record<keyof typeof data, string>> = {};
+                for (const field in validationErrors) {
+                    newErrors[field as keyof typeof data] = validationErrors[field][0];
+                }
+                setError(newErrors);
+                toast.error('入力内容にエラーがあります。', {
+                    description: '各フィールドを確認してください。',
                     duration: 3000,
                 });
-
-                // 各フィールドの値を明示的に設定して初期化する
-                setData({
-                    line_uid: '',
-                    month: '',
-                    day: '',
-                    hour: '',
-                    minute: '',
-                    points: '',
-                    ng_reason_id: '', // これでuseEffectがトリガーされる
-                });
-
-                // DOMの更新を待ってからフォーカスを当てる
-                setTimeout(() => {
-                    document.getElementById('line_uid')?.focus();
-                }, 100);
-            },
-            onError: () => {
-                toast.error('登録に失敗しました', {
-                    description: 'データの保存中にエラーが発生しました。',
+            } else {
+                console.error("An error occurred:", error);
+                toast.error('エラーが発生しました', {
+                    description: 'サーバーとの通信中に問題が発生しました。',
                     duration: 3000,
                 });
             }
-        });
+        }
+    };
+
+    const handleConfirmDuplicate = () => {
+        setData('is_duplicate', 1);
+        setSubmitTrigger(Date.now()); // Trigger submission
     };
 
     const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
         if (e.key === 'Enter' && (e.target as HTMLElement).tagName.toLowerCase() !== 'textarea') {
             e.preventDefault();
-
-            // Focus management for Enter key
             const currentElement = e.target as HTMLElement;
             const formElements = Array.from(e.currentTarget.querySelectorAll(
                 'input[type="text"], input[type="number"], [role="combobox"], button[type="submit"]'
             )) as HTMLElement[];
-
-            const currentIndex = formElements.indexOf(currentElement);
-
-            // If current element is not found, try to find the parent element (for Select component)
-            let actualIndex = currentIndex;
-            if (currentIndex === -1) {
+            let actualIndex = formElements.indexOf(currentElement);
+            if (actualIndex === -1) {
                 const parentElement = currentElement.closest('[role="combobox"]') as HTMLElement;
                 if (parentElement) {
                     actualIndex = formElements.indexOf(parentElement);
                 }
             }
-
             if (actualIndex !== -1 && actualIndex < formElements.length - 1) {
                 const nextElement = formElements[actualIndex + 1];
-
-                // Special handling for Select component
                 if (nextElement.getAttribute('role') === 'combobox') {
                     nextElement.click();
                 } else {
                     nextElement.focus();
                 }
             } else if (actualIndex === formElements.length - 1) {
-                // If it's the submit button, submit the form
                 if ((currentElement as HTMLButtonElement).type === 'submit') {
                     submit(e as any);
                 }
@@ -188,7 +235,7 @@ export default function Entry() {
                 <div className="flex items-center gap-2">
                     {['J04', 'J06'].includes(auth.user?.worker_code ?? '') && (
                         <Button
-                            variant="default" // ベースのvariantを指定
+                            variant="default"
                             className="border border-white bg-transparent text-white hover:bg-white hover:text-blue-700"
                             onClick={() => setUserAddModalOpen(true)}
                         >
@@ -340,14 +387,12 @@ export default function Entry() {
                                 <Select
                                     onValueChange={value => setData('ng_reason_id', value)}
                                     value={data.ng_reason_id}
-                                    defaultValue={ngReasons.find(r => r.reason === '指定なし')?.id?.toString()}
                                 >
                                     <SelectTrigger
                                         className="h-12 border-2 border-gray-200 focus:border-blue-500 rounded-lg pl-12"
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') {
                                                 e.preventDefault();
-                                                // Find submit button and focus it
                                                 const submitButton = document.querySelector('button[type="submit"]') as HTMLElement;
                                                 if (submitButton) {
                                                     submitButton.focus();
@@ -394,6 +439,13 @@ export default function Entry() {
             <UserAddModal
                 open={userAddModalOpen}
                 onOpenChange={setUserAddModalOpen}
+            />
+
+            <DuplicateConfirmationModal
+                open={duplicateModalOpen}
+                onOpenChange={setDuplicateModalOpen}
+                onConfirm={handleConfirmDuplicate}
+                isSubmitting={processing}
             />
 
             {/* Material Icons Link */}

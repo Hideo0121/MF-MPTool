@@ -29,6 +29,7 @@ class StoreEntryRequest extends FormRequest
             'minute' => ['nullable', 'integer', 'between:0,59'],
             'points' => ['required', 'integer'],
             'ng_reason_id' => ['required', 'exists:ng_reasons,id'],
+            'is_duplicate' => ['required', 'boolean'],
         ];
     }
 
@@ -47,6 +48,8 @@ class StoreEntryRequest extends FormRequest
             'points.required' => 'ポイントは必須です。',
             'ng_reason_id.required' => 'NG理由を選択してください。',
             'ng_reason_id.exists' => '選択されたNG理由が無効です。',
+            'is_duplicate.required' => '重複チェックフラグは必須です。',
+            'is_duplicate.boolean' => '重複チェックフラグの値が不正です。',
         ];
     }
 }

@@ -23,6 +23,7 @@ Route::get('/dashboard', [EntryController::class, 'create'])->middleware(['auth'
 Route::middleware('auth')->group(function () {
     Route::get('/entry', [EntryController::class, 'create'])->name('entry.create');
     Route::post('/entry', [EntryController::class, 'store'])->name('entry.store');
+    Route::post('/entries/check-duplicate', [EntryController::class, 'checkDuplicate'])->name('entries.checkDuplicate');
     Route::get('/line-uid-entry', [LineUidEntryController::class, 'index'])->name('line-uid-entry.index');
     Route::post('/line-uid-entry', [LineUidController::class, 'store'])->name('line-uid-entry.store');
 });
