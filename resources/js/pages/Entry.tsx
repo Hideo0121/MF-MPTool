@@ -120,6 +120,8 @@ export default function Entry() {
                         ng_reason_id: defaultReason ? String(defaultReason.id) : '',
                         is_duplicate: 0,
                     });
+                    // 登録直後に一覧を再取得
+                    fetchEntries();
                     clearErrors();
                     setTimeout(() => {
                         document.getElementById('line_uid')?.focus();
@@ -418,11 +420,11 @@ export default function Entry() {
             </div>
 
             {/* Main Content */}
-            <div className="container mx-auto px-6 py-8 max-w-[1500px]">
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <form onSubmit={submit} onKeyDown={handleFormKeyDown} className="space-y-8">
+            <div className="container mx-auto px-6 py-6 max-w-[1500px]">
+                <div className="bg-white rounded-2xl shadow-xl p-6">
+                    <form onSubmit={submit} onKeyDown={handleFormKeyDown} className="space-y-4">
                         {/* LINE UID */}
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label htmlFor="line_uid" className="text-blue-700 font-medium flex items-center">
                                 <span className="material-icons mr-2">link</span>
                                 LINE UID
@@ -443,7 +445,7 @@ export default function Entry() {
                         </div>
 
                         {/* Points */}
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label htmlFor="points" className="text-blue-700 font-medium flex items-center">
                                 <span className="material-icons mr-2">star</span>
                                 ポイント
@@ -463,12 +465,12 @@ export default function Entry() {
                         </div>
 
                         {/* Receipt Datetime */}
-                        <fieldset className="border-2 border-blue-200 rounded-xl p-6 bg-blue-50/30">
+                        <fieldset className="border-2 border-blue-200 rounded-xl p-4 bg-blue-50/30">
                             <legend className="px-4 text-blue-700 font-bold flex items-center">
                                 <span className="material-icons mr-2">schedule</span>
                                 レシート日時
                             </legend>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
                                 <div className="space-y-2">
                                     <Label htmlFor="month" className="text-blue-700 font-medium">月</Label>
                                     <div className="relative">
@@ -541,7 +543,7 @@ export default function Entry() {
                         </fieldset>
 
                         {/* NG Reason */}
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                             <Label htmlFor="ng_reason_id" className="text-blue-700 font-medium flex items-center">
                                 <span className="material-icons mr-2">list</span>
                                 NG理由
@@ -599,7 +601,11 @@ export default function Entry() {
 
                 {/* Data List Area */}
                 <div className="mt-10">
-                    <h2 className="text-lg font-bold text-blue-700 mb-4 flex items-center"><span className="material-icons mr-2">list</span>登録済みデータ</h2>
+                    <h2 className="text-lg font-bold text-blue-700 mb-4 flex items-center">
+                        <span className="material-icons mr-2">list</span>
+                        登録済みデータ
+                        <span className="ml-3 text-sm font-medium text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">{entries.length}件</span>
+                    </h2>
                     {/* Search Filters */}
                     <div className="bg-white rounded-xl shadow p-4 mb-4 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
