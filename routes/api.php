@@ -16,7 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
         return $request->user();
     });
 
-    Route::apiResource('entries', LineUidEntryController::class)->only(['store']);
+    Route::apiResource('entries', LineUidEntryController::class)->only(['store', 'index', 'update']);
     Route::get('ng-reasons', [NgReasonController::class, 'index']);
 
     // J04 user specific routes

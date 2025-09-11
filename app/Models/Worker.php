@@ -18,6 +18,7 @@ class Worker extends Authenticatable
      */
     protected $fillable = [
         'worker_code',
+        'name',
         'password',
         'is_admin',
     ];

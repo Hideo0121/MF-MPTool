@@ -3,19 +3,61 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Head, useForm } from '@inertiajs/react';
-import { type FormEvent } from 'react';
+import { type FormEvent, useEffect } from 'react';
+import axios, { type AxiosError } from 'axios';
+
+// Laravelのバリデーションエラーの型を定義
+interface ValidationErrors {
+    errors: {
+        worker_code?: string[];
+        password?: string[];
+    };
+    message: string;
+}
 
 export default function Login({ status }: { status?: string }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, processing, errors, setError, clearErrors } = useForm({
         worker_code: '',
         password: '',
     });
 
+    // コンポーネントがアンマウントされる時にエラーをクリアします
+    useEffect(() => {
+        return () => {
+            clearErrors();
+        };
+    }, []);
+
     const submit = (e: FormEvent) => {
         e.preventDefault();
-        post(route('login'), {
-            onFinish: () => reset('password'),
-        });
+        clearErrors(); // 送信前に以前のエラーをクリア
+
+        // グローバル設定が適用されたaxiosを直接使用します
+        axios.post('/login', data)
+            .then(() => {
+                // ログイン成功時、サーバーからのリダイレクト指示に従うため、
+                // ページを完全に再読み込みして状態をリフレッシュするのが最も確実です。
+                window.location.href = '/entry';
+            })
+            .catch((error: AxiosError<ValidationErrors>) => {
+                // Laravelからのバリデーションエラー(422)を処理します
+                if (error.response && error.response.status === 422 && error.response.data.errors) {
+                    const serverErrors = error.response.data.errors;
+                    if (serverErrors.worker_code) {
+                        setError('worker_code', serverErrors.worker_code[0]);
+                    }
+                    if (serverErrors.password) {
+                        setError('password', serverErrors.password[0]);
+                    }
+                } else if (error.response && error.response.status === 419) {
+                    setError('worker_code', 'ページの有効期限が切れました。ページをリロードして再度お試しください。');
+                }
+                else {
+                    // その他のエラー（500サーバーエラー、ネットワークエラーなど）
+                    console.error('予期せぬエラーが発生しました:', error);
+                    setError('worker_code', 'ログインに失敗しました。時間をおいて再度お試しください。');
+                }
+            });
     };
 
     return (

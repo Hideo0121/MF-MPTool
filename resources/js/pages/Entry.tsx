@@ -17,13 +17,43 @@ import { type PageProps, type NgReason } from '@/types';
 import { toast } from 'sonner';
 import UserAddModal from '@/components/UserAddModal';
 import DuplicateConfirmationModal from '@/components/DuplicateConfirmationModal';
+import ConfirmModal from '@/components/ConfirmModal';
+
+interface EntryItem {
+    id: number;
+    line_uid: string;
+    points: number;
+    month: number | null;
+    day: number | null;
+    hour: number | null;
+    minute: number | null;
+    is_duplicate: boolean;
+    created_at: string;
+    ng_reason?: { id: number; reason: string };
+    worker?: { worker_code: string; name?: string };
+    ng_reason_id?: number; // for mapping when editing
+}
 
 export default function Entry() {
     const { auth } = usePage<PageProps>().props;
     const [userAddModalOpen, setUserAddModalOpen] = useState(false);
     const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+    const [confirmUpdateOpen, setConfirmUpdateOpen] = useState(false);
+    const [confirmEditSwitchOpen, setConfirmEditSwitchOpen] = useState(false);
+    const [confirmCancelEditOpen, setConfirmCancelEditOpen] = useState(false);
+    const [entries, setEntries] = useState<EntryItem[]>([]);
+    const [workers, setWorkers] = useState<{ worker_code: string; name?: string }[]>([]);
+    const [filters, setFilters] = useState({
+        line_uid: '',
+        worker_code: auth.user?.is_admin ? '' : (auth.user?.worker_code ?? ''),
+        start_date: '',
+        end_date: '',
+    });
+    const [sort, setSort] = useState<{ by: string; order: 'asc' | 'desc' }>({ by: 'created_at', order: 'desc' });
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [originalData, setOriginalData] = useState<any | null>(null);
     const [ngReasons, setNgReasons] = useState<NgReason[]>([]);
-    const { data, setData, post, processing, errors, clearErrors, setError } = useForm({
+    const { data, setData, post, processing, errors, clearErrors, setError, transform } = useForm({
         line_uid: '',
         month: '',
         day: '',
@@ -39,14 +69,23 @@ export default function Entry() {
 
     // Fetch NG reasons on component mount
     useEffect(() => {
-        axios.get('/api/ng-reasons')
-            .then(response => {
-                setNgReasons(response.data);
-            })
-            .catch(err => {
-                console.error("Failed to fetch NG reasons:", err);
-            });
+        axios.get('/api/ng-reasons').then(r => setNgReasons(r.data)).catch(e => console.error(e));
+        if (auth.user?.is_admin) {
+            axios.get('/api/admin/workers').then(r => setWorkers(r.data)).catch(e => console.error(e));
+        }
+        fetchEntries();
     }, []);
+
+    const fetchEntries = () => {
+        const params = new URLSearchParams();
+        if (filters.line_uid) params.append('line_uid', filters.line_uid);
+        if (filters.worker_code) params.append('worker_code', filters.worker_code);
+        if (filters.start_date) params.append('start_date', filters.start_date);
+        if (filters.end_date) params.append('end_date', filters.end_date);
+        params.append('sort_by', sort.by);
+        params.append('sort_order', sort.order);
+        axios.get(`/api/entries?${params.toString()}`).then(r => setEntries(r.data)).catch(e => console.error(e));
+    };
 
     // Set default NG reason once the reasons are loaded and if not already set
     useEffect(() => {
@@ -152,6 +191,11 @@ export default function Entry() {
     const submit = async (e: FormEvent) => {
         e.preventDefault();
         clearErrors();
+        if (editingId) {
+            // 更新確認モーダル
+            setConfirmUpdateOpen(true);
+            return;
+        }
         try {
             const response = await axios.post(route('entries.checkDuplicate'), {
                 line_uid: data.line_uid,
@@ -192,6 +236,120 @@ export default function Entry() {
     const handleConfirmDuplicate = () => {
         setData('is_duplicate', 1);
         setSubmitTrigger(Date.now()); // Trigger submission
+    };
+
+    const performUpdate = async () => {
+        if (!editingId) return;
+        setConfirmUpdateOpen(false);
+        try {
+            const payload = {
+                line_uid: data.line_uid,
+                points: Number(data.points),
+                month: data.month ? Number(data.month) : null,
+                day: data.day ? Number(data.day) : null,
+                hour: data.hour ? Number(data.hour) : null,
+                minute: data.minute ? Number(data.minute) : null,
+                ng_reason_id: Number(data.ng_reason_id),
+            };
+            const res = await axios.put(`/api/entries/${editingId}`, payload);
+            toast.success('更新しました');
+            // リストを更新
+            fetchEntries();
+            // フォームをリセット
+            cancelEdit(true);
+        } catch (error: any) {
+            if (error.response?.status === 422) {
+                const validationErrors = error.response.data.errors;
+                const newErrors: Partial<Record<keyof typeof data, string>> = {};
+                for (const field in validationErrors) {
+                    newErrors[field as keyof typeof data] = validationErrors[field][0];
+                }
+                setError(newErrors);
+            }
+            toast.error('更新に失敗しました');
+        }
+    };
+
+    const hasUnsavedChanges = () => {
+        if (!originalData) return !!(data.line_uid || data.points || data.month || data.day || data.hour || data.minute);
+        return [
+            'line_uid', 'points', 'month', 'day', 'hour', 'minute', 'ng_reason_id'
+        ].some((k: any) => String((data as any)[k] ?? '') !== String(originalData[k] ?? ''));
+    };
+
+    const startEdit = (entry: EntryItem) => {
+        if (hasUnsavedChanges()) {
+            setPendingEditEntry(entry);
+            setConfirmEditSwitchOpen(true);
+            return;
+        }
+        applyEdit(entry);
+    };
+
+    const [pendingEditEntry, setPendingEditEntry] = useState<EntryItem | null>(null);
+
+    const applyEdit = (entry: EntryItem) => {
+        setEditingId(entry.id);
+        setOriginalData({
+            line_uid: entry.line_uid,
+            points: entry.points,
+            month: entry.month ?? '',
+            day: entry.day ?? '',
+            hour: entry.hour ?? '',
+            minute: entry.minute ?? '',
+            ng_reason_id: entry.ng_reason?.id ?? entry.ng_reason_id ?? '',
+        });
+        setData({
+            line_uid: entry.line_uid,
+            points: String(entry.points),
+            month: entry.month ? String(entry.month) : '',
+            day: entry.day ? String(entry.day) : '',
+            hour: entry.hour ? String(entry.hour) : '',
+            minute: entry.minute ? String(entry.minute) : '',
+            ng_reason_id: entry.ng_reason?.id ? String(entry.ng_reason.id) : (entry.ng_reason_id ? String(entry.ng_reason_id) : ''),
+            is_duplicate: entry.is_duplicate ? 1 : 0,
+        });
+        setPendingEditEntry(null);
+        clearErrors();
+    };
+
+    const cancelEdit = (silent = false) => {
+        if (!silent && hasUnsavedChanges()) {
+            setConfirmCancelEditOpen(true);
+            return;
+        }
+        setEditingId(null);
+        setOriginalData(null);
+        const defaultReason = ngReasons.find(r => r.reason === '指定なし');
+        setData({
+            line_uid: '',
+            points: '',
+            month: '',
+            day: '',
+            hour: '',
+            minute: '',
+            ng_reason_id: defaultReason ? String(defaultReason.id) : '',
+            is_duplicate: 0,
+        });
+        clearErrors();
+    };
+
+    const toggleSort = (col: string) => {
+        setSort(prev => {
+            if (prev.by === col) {
+                return { by: col, order: prev.order === 'asc' ? 'desc' : 'asc' };
+            }
+            return { by: col, order: 'asc' };
+        });
+    };
+
+    useEffect(() => { fetchEntries(); }, [sort]);
+    useEffect(() => { /* filters change not auto fetch until search button pressed */ }, [filters]);
+
+    const formatDateTime = (iso: string) => {
+        const d = new Date(iso);
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
 
     const handleFormKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
@@ -260,7 +418,7 @@ export default function Entry() {
             </div>
 
             {/* Main Content */}
-            <div className="container mx-auto px-6 py-8 max-w-4xl">
+            <div className="container mx-auto px-6 py-8 max-w-[1500px]">
                 <div className="bg-white rounded-2xl shadow-xl p-8">
                     <form onSubmit={submit} onKeyDown={handleFormKeyDown} className="space-y-8">
                         {/* LINE UID */}
@@ -420,23 +578,126 @@ export default function Entry() {
                             <InputError message={errors.ng_reason_id} className="text-red-500 text-sm" />
                         </div>
 
-                        {/* Submit Button */}
-                        <div className="flex justify-center pt-6">
+                        {/* Action Buttons */}
+                        <div className="flex justify-center gap-4 pt-6">
+                            {editingId && (
+                                <Button type="button" variant="outline" onClick={() => cancelEdit()} disabled={processing}>
+                                    編集キャンセル
+                                </Button>
+                            )}
                             <Button
                                 type="submit"
                                 disabled={processing}
                                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-12 py-3 rounded-lg font-bold text-lg shadow-lg transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1 flex items-center"
                             >
-                                <span className="material-icons mr-2">save</span>
-                                {processing ? '登録中...' : '登録'}
+                                <span className="material-icons mr-2">{editingId ? 'update' : 'save'}</span>
+                                {processing ? (editingId ? '更新中...' : '登録中...') : (editingId ? '更新' : '登録')}
                             </Button>
                         </div>
                     </form>
                 </div>
 
+                {/* Data List Area */}
+                <div className="mt-10">
+                    <h2 className="text-lg font-bold text-blue-700 mb-4 flex items-center"><span className="material-icons mr-2">list</span>登録済みデータ</h2>
+                    {/* Search Filters */}
+                    <div className="bg-white rounded-xl shadow p-4 mb-4 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                            <div className="md:col-span-2">
+                                <Label className="text-sm">LINE UID</Label>
+                                <Input
+                                    value={filters.line_uid}
+                                    onChange={e => setFilters(f => ({ ...f, line_uid: e.target.value }))}
+                                    placeholder="完全一致"
+                                    className="font-mono w-full md:w-[38ch]"
+                                />
+                            </div>
+                            <div className="md:col-span-1">
+                                <Label className="text-sm">作業者</Label>
+                                {auth.user?.is_admin ? (
+                                    <select className="w-full border rounded h-10 px-2" value={filters.worker_code} onChange={e => setFilters(f => ({ ...f, worker_code: e.target.value }))}>
+                                        <option value="">全て</option>
+                                        {workers.map(w => <option key={w.worker_code} value={w.worker_code}>{w.worker_code} {w.name}</option>)}
+                                    </select>
+                                ) : (
+                                    <Input value={filters.worker_code} disabled />
+                                )}
+                            </div>
+                            <div className="md:col-span-1">
+                                <Label className="text-sm">開始日</Label>
+                                <Input type="date" value={filters.start_date} onChange={e => setFilters(f => ({ ...f, start_date: e.target.value }))} />
+                            </div>
+                            <div className="md:col-span-1">
+                                <Label className="text-sm">終了日</Label>
+                                <Input type="date" value={filters.end_date} onChange={e => setFilters(f => ({ ...f, end_date: e.target.value }))} />
+                            </div>
+                            <div className="flex gap-2 md:col-span-1">
+                                <Button
+                                    type="button"
+                                    onClick={() => fetchEntries()}
+                                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white px-6 py-3 rounded-lg font-bold shadow-lg text-sm md:text-base transition-all duration-200 hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center"
+                                >
+                                    <span className="material-icons mr-1 text-base md:text-lg">search</span>
+                                    検索
+                                </Button>
+                                <Button type="button" variant="outline" onClick={() => { setFilters({ line_uid: '', worker_code: auth.user?.is_admin ? '' : (auth.user?.worker_code ?? ''), start_date: '', end_date: '' }); fetchEntries(); }}>リセット</Button>
+                            </div>
+                        </div>
+                    </div>
+                    {/* Data Table */}
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-blue-600 text-white">
+                                    <tr>
+                                        {['line_uid','points','month','day','hour','minute','ng_reason','is_duplicate','created_at','worker_code','action'].map(col => (
+                                            <th
+                                                key={col}
+                                                className={
+                                                    'px-3 py-2 font-medium select-none ' +
+                                                    (col !== 'action' && col !== 'ng_reason' ? 'cursor-pointer ' : '') +
+                                                    (col === 'line_uid' ? 'font-mono w-[34ch] min-w-[34ch] ' : '')
+                                                }
+                                                onClick={() => col !== 'action' && col !== 'ng_reason' && toggleSort(col)}
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    <span>{col}</span>
+                                                    {sort.by === col && <span>{sort.order === 'asc' ? '▲' : '▼'}</span>}
+                                                </div>
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {entries.map(entry => (
+                                        <tr key={entry.id} className={editingId === entry.id ? 'bg-yellow-50' : ''}>
+                                            <td className="px-3 py-1 font-mono text-xs break-all w-[34ch] min-w-[34ch]">{entry.line_uid}</td>
+                                            <td className="px-3 py-1 text-right">{entry.points}</td>
+                                            <td className="px-3 py-1 text-center">{entry.month ?? ''}</td>
+                                            <td className="px-3 py-1 text-center">{entry.day ?? ''}</td>
+                                            <td className="px-3 py-1 text-center">{entry.hour ?? ''}</td>
+                                            <td className="px-3 py-1 text-center">{entry.minute ?? ''}</td>
+                                            <td className="px-3 py-1">{entry.ng_reason?.reason ?? ''}</td>
+                                            <td className="px-3 py-1 text-center">{entry.is_duplicate ? '重複' : ''}</td>
+                                            <td className="px-3 py-1 whitespace-nowrap">{formatDateTime(entry.created_at)}</td>
+                                            <td className="px-3 py-1 text-center">{entry.worker?.worker_code ?? ''}</td>
+                                            <td className="px-3 py-1 text-center">
+                                                <Button size="sm" variant="outline" onClick={() => startEdit(entry)}>✏️</Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {entries.length === 0 && (
+                                        <tr><td colSpan={11} className="text-center py-6 text-gray-500">データがありません</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Helper Text */}
                 <div className="mt-6 text-center text-gray-600 space-y-2">
-                    <p className="text-sm">💡 ショートカットキー: F5でクリップボード貼り付け | F12で登録実行</p>
+                    <p className="text-sm">💡 ショートカットキー: F5でクリップボード貼り付け | F12で {editingId ? '更新実行' : '登録実行'}</p>
                     <p className="text-xs">Enterキーでフィールド間を移動できます</p>
                 </div>
             </div>
@@ -451,6 +712,32 @@ export default function Entry() {
                 onOpenChange={setDuplicateModalOpen}
                 onConfirm={handleConfirmDuplicate}
                 isSubmitting={processing}
+            />
+
+            <ConfirmModal
+                open={confirmUpdateOpen}
+                onOpenChange={setConfirmUpdateOpen}
+                title="更新確認"
+                message="データを更新しますか？"
+                confirmLabel="更新する"
+                onConfirm={performUpdate}
+                isProcessing={processing}
+            />
+            <ConfirmModal
+                open={confirmEditSwitchOpen}
+                onOpenChange={setConfirmEditSwitchOpen}
+                title="編集モード切替"
+                message={`現在の入力内容は破棄されます。\n編集モードに切り替えてもよろしいですか？`}
+                confirmLabel="切り替える"
+                onConfirm={() => { if(pendingEditEntry) applyEdit(pendingEditEntry); setConfirmEditSwitchOpen(false); }}
+            />
+            <ConfirmModal
+                open={confirmCancelEditOpen}
+                onOpenChange={setConfirmCancelEditOpen}
+                title="編集キャンセル"
+                message={`現在の変更内容は破棄されます。\nキャンセルしてよろしいですか？`}
+                confirmLabel="破棄する"
+                onConfirm={() => { setConfirmCancelEditOpen(false); cancelEdit(true); }}
             />
 
             {/* Material Icons Link */}

@@ -31,4 +31,9 @@ class LineUidEntry extends Model
     {
         return $this->belongsTo(NgReason::class);
     }
+
+    public function worker(): BelongsTo
+    {
+        return $this->belongsTo(Worker::class, 'worker_code', 'worker_code');
+    }
 }
