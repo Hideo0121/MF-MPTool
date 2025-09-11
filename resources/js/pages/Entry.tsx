@@ -653,8 +653,10 @@ export default function Entry() {
                     {/* Data Table */}
                     <div className="bg-white rounded-xl shadow overflow-hidden">
                         <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-blue-600 text-white">
+                            <div className="max-h-[560px] overflow-y-auto">
+                                {/* 15行 * 想定行高(~36px) ≒ 540px 余裕を持って560px */}
+                                <table className="min-w-full text-sm">
+                                <thead className="bg-blue-600 text-white sticky top-0 z-10 shadow">
                                     <tr>
                                         {['line_uid','points','month','day','hour','minute','ng_reason','is_duplicate','created_at','worker_code','action'].map(col => (
                                             <th
@@ -696,7 +698,8 @@ export default function Entry() {
                                         <tr><td colSpan={11} className="text-center py-6 text-gray-500">データがありません</td></tr>
                                     )}
                                 </tbody>
-                            </table>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
