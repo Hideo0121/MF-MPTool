@@ -30,6 +30,7 @@ class StoreEntryRequest extends FormRequest
             'points' => ['required', 'integer'],
             'ng_reason_id' => ['required', 'exists:ng_reasons,id'],
             'is_duplicate' => ['required', 'boolean'],
+            'other' => ['nullable', 'string', 'max:255'],
         ];
     }
 

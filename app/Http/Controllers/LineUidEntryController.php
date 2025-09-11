@@ -35,11 +35,14 @@ class LineUidEntryController extends Controller
         if ($request->filled('end_date')) {
             $query->whereDate('created_at', '<=', $request->end_date);
         }
+        if ($request->filled('other')) {
+            $query->where('other', 'like', '%' . $request->other . '%');
+        }
 
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
 
-        $allowedSort = ['created_at', 'points', 'line_uid', 'month', 'day', 'hour', 'minute'];
+    $allowedSort = ['created_at', 'points', 'line_uid', 'month', 'day', 'hour', 'minute', 'other'];
         if (!in_array($sortBy, $allowedSort, true)) {
             $sortBy = 'created_at';
         }
@@ -72,6 +75,7 @@ class LineUidEntryController extends Controller
             'ng_reason_id' => $validated['ng_reason_id'],
             'worker_code' => Auth::user()->worker_code,
             'is_duplicate' => $isDuplicate,
+            'other' => $request->input('other'),
         ]);
 
         return redirect()->route('entry.create')->with('success', '登録が完了しました。');
@@ -106,6 +110,7 @@ class LineUidEntryController extends Controller
             'points' => $validated['points'],
             'ng_reason_id' => $validated['ng_reason_id'],
             'is_duplicate' => $isDuplicate,
+            'other' => $request->input('other'),
         ]);
 
         $entry->load(['ngReason:id,reason', 'worker:worker_code,name']);

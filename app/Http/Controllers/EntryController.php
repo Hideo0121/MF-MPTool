@@ -34,7 +34,7 @@ class EntryController extends Controller
         $worker = $request->user(); // This is actually a Worker model based on auth config
         $workerCode = $worker->worker_code;
 
-                LineUidEntry::create([
+        LineUidEntry::create([
             'line_uid' => $validated['line_uid'],
             'month' => $validated['month'],
             'day' => $validated['day'],
@@ -44,6 +44,7 @@ class EntryController extends Controller
             'ng_reason_id' => $validated['ng_reason_id'],
             'worker_code' => $workerCode,
             'is_duplicate' => $validated['is_duplicate'],
+            'other' => $request->input('other'),
         ]);
 
         return redirect()->back()->with('success', '登録が完了しました');

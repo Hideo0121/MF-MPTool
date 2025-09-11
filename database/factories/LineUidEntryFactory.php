@@ -25,6 +25,7 @@ class LineUidEntryFactory extends Factory
             'ng_reason_id' => NgReason::factory(),
             'worker_code' => 'USR1',
             'is_duplicate' => false,
+            'other' => null,
         ];
     }
 }

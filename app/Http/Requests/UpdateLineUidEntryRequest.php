@@ -21,6 +21,7 @@ class UpdateLineUidEntryRequest extends FormRequest
             'minute' => 'nullable|integer|min:0|max:59',
             'points' => 'required|integer',
             'ng_reason_id' => 'required|exists:ng_reasons,id',
+            'other' => 'nullable|string|max:255',
         ];
     }
 }

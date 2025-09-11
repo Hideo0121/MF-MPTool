@@ -32,6 +32,7 @@ interface EntryItem {
     ng_reason?: { id: number; reason: string };
     worker?: { worker_code: string; name?: string };
     ng_reason_id?: number; // for mapping when editing
+    other?: string | null;
 }
 
 export default function Entry() {
@@ -48,6 +49,7 @@ export default function Entry() {
         worker_code: auth.user?.is_admin ? '' : (auth.user?.worker_code ?? ''),
         start_date: '',
         end_date: '',
+    other: '',
     });
     const [sort, setSort] = useState<{ by: string; order: 'asc' | 'desc' }>({ by: 'created_at', order: 'desc' });
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -62,6 +64,7 @@ export default function Entry() {
         points: '',
         ng_reason_id: '',
         is_duplicate: 0,
+        other: '',
     });
 
     // State to trigger form submission after state updates
@@ -81,7 +84,8 @@ export default function Entry() {
         if (filters.line_uid) params.append('line_uid', filters.line_uid);
         if (filters.worker_code) params.append('worker_code', filters.worker_code);
         if (filters.start_date) params.append('start_date', filters.start_date);
-        if (filters.end_date) params.append('end_date', filters.end_date);
+    if (filters.end_date) params.append('end_date', filters.end_date);
+    if (filters.other) params.append('other', filters.other);
         params.append('sort_by', sort.by);
         params.append('sort_order', sort.order);
         axios.get(`/api/entries?${params.toString()}`).then(r => setEntries(r.data)).catch(e => console.error(e));
@@ -119,6 +123,7 @@ export default function Entry() {
                         points: '',
                         ng_reason_id: defaultReason ? String(defaultReason.id) : '',
                         is_duplicate: 0,
+                        other: '',
                     });
                     // 登録直後に一覧を再取得
                     fetchEntries();
@@ -252,6 +257,7 @@ export default function Entry() {
                 hour: data.hour ? Number(data.hour) : null,
                 minute: data.minute ? Number(data.minute) : null,
                 ng_reason_id: Number(data.ng_reason_id),
+                other: data.other || null,
             };
             const res = await axios.put(`/api/entries/${editingId}`, payload);
             toast.success('更新しました');
@@ -275,7 +281,7 @@ export default function Entry() {
     const hasUnsavedChanges = () => {
         if (!originalData) return !!(data.line_uid || data.points || data.month || data.day || data.hour || data.minute);
         return [
-            'line_uid', 'points', 'month', 'day', 'hour', 'minute', 'ng_reason_id'
+            'line_uid', 'points', 'month', 'day', 'hour', 'minute', 'ng_reason_id', 'other'
         ].some((k: any) => String((data as any)[k] ?? '') !== String(originalData[k] ?? ''));
     };
 
@@ -300,6 +306,7 @@ export default function Entry() {
             hour: entry.hour ?? '',
             minute: entry.minute ?? '',
             ng_reason_id: entry.ng_reason?.id ?? entry.ng_reason_id ?? '',
+            other: entry.other ?? '',
         });
         setData({
             line_uid: entry.line_uid,
@@ -310,6 +317,7 @@ export default function Entry() {
             minute: entry.minute ? String(entry.minute) : '',
             ng_reason_id: entry.ng_reason?.id ? String(entry.ng_reason.id) : (entry.ng_reason_id ? String(entry.ng_reason_id) : ''),
             is_duplicate: entry.is_duplicate ? 1 : 0,
+            other: entry.other ?? '',
         });
         setPendingEditEntry(null);
         clearErrors();
@@ -332,6 +340,7 @@ export default function Entry() {
             minute: '',
             ng_reason_id: defaultReason ? String(defaultReason.id) : '',
             is_duplicate: 0,
+            other: '',
         });
         clearErrors();
     };
@@ -580,6 +589,26 @@ export default function Entry() {
                             <InputError message={errors.ng_reason_id} className="text-red-500 text-sm" />
                         </div>
 
+                        {/* Other */}
+                        <div className="space-y-1">
+                            <Label htmlFor="other" className="text-blue-700 font-medium flex items-center">
+                                <span className="material-icons mr-2">notes</span>
+                                その他
+                            </Label>
+                            <div className="relative">
+                                <Input
+                                    id="other"
+                                    type="text"
+                                    value={data.other}
+                                    onChange={e => setData('other', e.target.value)}
+                                    className="pl-12 border-2 border-gray-200 focus:border-blue-500 rounded-lg h-12"
+                                    placeholder="自由入力 (任意)"
+                                />
+                                <span className="material-icons absolute left-3 top-3 text-gray-400">edit_note</span>
+                            </div>
+                            <InputError message={errors.other as any} className="text-red-500 text-sm" />
+                        </div>
+
                         {/* Action Buttons */}
                         <div className="flex justify-center gap-4 pt-6">
                             {editingId && (
@@ -608,14 +637,14 @@ export default function Entry() {
                     </h2>
                     {/* Search Filters */}
                     <div className="bg-white rounded-xl shadow p-4 mb-4 space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                        <div className="grid grid-cols-1 md:grid-cols-8 gap-3 md:gap-2 items-end">
                             <div className="md:col-span-2">
                                 <Label className="text-sm">LINE UID</Label>
                                 <Input
                                     value={filters.line_uid}
                                     onChange={e => setFilters(f => ({ ...f, line_uid: e.target.value }))}
                                     placeholder="完全一致"
-                                    className="font-mono w-full md:w-[38ch]"
+                                    className="font-mono w-full"
                                 />
                             </div>
                             <div className="md:col-span-1">
@@ -637,7 +666,11 @@ export default function Entry() {
                                 <Label className="text-sm">終了日</Label>
                                 <Input type="date" value={filters.end_date} onChange={e => setFilters(f => ({ ...f, end_date: e.target.value }))} />
                             </div>
-                            <div className="flex gap-2 md:col-span-1">
+                            <div className="md:col-span-1">
+                                <Label className="text-sm">その他</Label>
+                                <Input value={filters.other} onChange={e => setFilters(f => ({...f, other: e.target.value}))} placeholder="含む文字" />
+                            </div>
+                            <div className="flex gap-2 md:col-span-2 justify-end">
                                 <Button
                                     type="button"
                                     onClick={() => fetchEntries()}
@@ -646,7 +679,7 @@ export default function Entry() {
                                     <span className="material-icons mr-1 text-base md:text-lg">search</span>
                                     検索
                                 </Button>
-                                <Button type="button" variant="outline" onClick={() => { setFilters({ line_uid: '', worker_code: auth.user?.is_admin ? '' : (auth.user?.worker_code ?? ''), start_date: '', end_date: '' }); fetchEntries(); }}>リセット</Button>
+                                <Button type="button" variant="outline" onClick={() => { setFilters({ line_uid: '', worker_code: auth.user?.is_admin ? '' : (auth.user?.worker_code ?? ''), start_date: '', end_date: '', other: '' }); fetchEntries(); }}>リセット</Button>
                             </div>
                         </div>
                     </div>
@@ -658,7 +691,7 @@ export default function Entry() {
                                 <table className="min-w-full text-sm">
                                 <thead className="bg-blue-600 text-white sticky top-0 z-10 shadow">
                                     <tr>
-                                        {['line_uid','points','month','day','hour','minute','ng_reason','is_duplicate','created_at','worker_code','action'].map(col => (
+                                        {['line_uid','points','month','day','hour','minute','ng_reason','other','is_duplicate','created_at','worker_code','action'].map(col => (
                                             <th
                                                 key={col}
                                                 className={
@@ -686,6 +719,7 @@ export default function Entry() {
                                             <td className="px-3 py-1 text-center">{entry.hour ?? ''}</td>
                                             <td className="px-3 py-1 text-center">{entry.minute ?? ''}</td>
                                             <td className="px-3 py-1">{entry.ng_reason?.reason ?? ''}</td>
+                                            <td className="px-3 py-1">{entry.other ?? ''}</td>
                                             <td className="px-3 py-1 text-center">{entry.is_duplicate ? '重複' : ''}</td>
                                             <td className="px-3 py-1 whitespace-nowrap">{formatDateTime(entry.created_at)}</td>
                                             <td className="px-3 py-1 text-center">{entry.worker?.worker_code ?? ''}</td>

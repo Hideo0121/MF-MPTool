@@ -25,6 +25,7 @@ class LineUidEntry extends Model
         'ng_reason_id',
         'worker_code',
         'is_duplicate',
+    'other',
     ];
 
     public function ngReason(): BelongsTo
